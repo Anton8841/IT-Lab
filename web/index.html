@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Таблична СУБД — Web-версія</title>
+  <style>
+    :root {
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #dce1e8;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --accent: #0f766e;
+      --accent-hover: #0d5e58;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .badge {
+      background: #e0e7ff;
+      color: #1e40af;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      padding: 7px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    button:hover { background: #f1f5f9; }
+    button.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    button.primary:hover { background: var(--primary-hover); }
+    button.danger {
+      background: var(--danger);
+      border-color: var(--danger);
+      color: #fff;
+    }
+    button.danger:hover { background: var(--danger-hover); }
+    button.accent {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button.accent:hover { background: var(--accent-hover); }
+    button.sm { padding: 4px 8px; font-size: 12px; }
+
+    .layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      min-height: 0;
+    }
+
+    aside {
+      background: var(--card);
+      border-right: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+
+    .aside-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .aside-header h2 { margin: 0; font-size: 15px; }
+
+    .table-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .table-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      gap: 6px;
+    }
+
+    .table-item.active {
+      background: #eff6ff;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+
+    .table-item-meta {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    main {
+      padding: 18px 22px;
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .toast {
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+    .toast.success { display: block; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .toast.error { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+    .workspace-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--card);
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .table-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    th .type-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      background: #e2e8f0;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+
+    tr:hover td { background: #f9fafb; }
+
+    .empty-state {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+    }
+
+    /* Модальні вікна */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 50;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .modal {
+      background: var(--card);
+      border-radius: 10px;
+      width: 100%;
+      max-width: 580px;
+      max-height: 88vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.18);
+    }
+
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { margin: 0; font-size: 16px; }
+
+    .modal-body {
+      padding: 16px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .field-group label {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    input[type="text"], select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+    }
+
+    .inline-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .modal-error {
+      background: #fee2e2;
+      color: #991b1b;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      display: none;
+    }
+    .modal-error.show { display: block; }
+
+    .col-chip-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .col-chip {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+    }
+
+    @media (max-width: 780px) {
+      .layout { grid-template-columns: 1fr; }
+      aside { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Таблична СУБД (Web)</h1>
+    <span id="dbBadge" class="badge">БД: ...</span>
+    <span id="fileBadge" class="hint"></span>
+  </div>
+  <div class="header-actions">
+    <button onclick="openNewDbModal()">Нова БД</button>
+    <button onclick="openDiskModal()">Диск (Зберегти / Відкрити)</button>
+    <button onclick="triggerImportJson()">Імпорт JSON</button>
+    <button onclick="window.location.href='/api/database/export'">Експорт JSON</button>
+    <input type="file" id="importJsonInput" accept=".json,application/json" style="display:none" />
+  </div>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="aside-header">
+      <h2>Таблиці БД</h2>
+      <button class="primary sm" onclick="openCreateTableModal()">+ Створити</button>
+    </div>
+    <ul id="tableList" class="table-list"></ul>
+  </aside>
+
+  <main>
+    <div id="toast" class="toast"></div>
+    <div id="workspace"></div>
+  </main>
+</div>
+
+<!-- Модальне вікно: Нова БД -->
+<div id="newDbModal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Нова база даних</h3>
+      <button class="sm" onclick="closeModal('newDbModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="newDbError" class="modal-error"></div>
+      <div class="field-group">
+        <label for="newDbNameInput">Назва бази даних</label>
+        <input type="text" id="newDbNameInput" value="MyWebDatabase" />
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('newDbModal')">Скасувати</button>
+      <button class="primary" onclick="submitNewDb()">Створити</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальне вікно: Диск (Серверне збереження/завантаження) -->
+<div id="diskModal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Збереження та зчитування з диска</h3>
+      <button class="sm" onclick="closeModal('diskModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="diskError" class="modal-error"></div>
+      <div class="field-group">
+        <label for="saveFilenameInput">Зберегти поточну БД на диск (у папку saved_dbs/)</label>
+        <div class="inline-row">
+          <input type="text" id="saveFilenameInput" placeholder="my_database.json" />
+          <button class="primary" onclick="submitSaveDisk()">Зберегти</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Збережені бази даних на диску</label>
+        <div id="savedFilesList" class="col-chip-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('diskModal')">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальне вікно: Створення таблиці -->
+<div id="createTableModal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Створення нової таблиці</h3>
+      <button class="sm" onclick="closeModal('createTableModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="createTableError" class="modal-error"></div>
+      <div class="field-group">
+        <label for="newTableNameInput">Назва таблиці</label>
+        <input type="text" id="newTableNameInput" placeholder="Наприклад: Students" />
+      </div>
+      <div class="field-group">
+        <label>Додати поле</label>
+        <div class="inline-row">
+          <input type="text" id="newColNameInput" placeholder="Назва поля" />
+          <select id="newColTypeSelect"></select>
+          <button onclick="addDraftColumn()">+ Додати</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Поля таблиці</label>
+        <div id="draftColsList" class="col-chip-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('createTableModal')">Скасувати</button>
+      <button class="primary" onclick="submitCreateTable()">Створити таблицю</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальне вікно: Додавання / Редагування рядка -->
+<div id="rowModal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="rowModalTitle">Рядок</h3>
+      <button class="sm" onclick="closeModal('rowModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="rowModalError" class="modal-error"></div>
+      <div id="rowFormFields" style="display:flex; flex-direction:column; gap:12px;"></div>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('rowModal')">Скасувати</button>
+      <button class="primary" onclick="submitRow()">Зберегти</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальне вікно: Перегляд текстового файлу -->
+<div id="viewFileModal" class="modal-backdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="viewFileTitle">Текстовий файл</h3>
+      <button class="sm" onclick="closeModal('viewFileModal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <textarea id="viewFileContent" rows="12" readonly></textarea>
+    </div>
+    <div class="modal-footer">
+      <button onclick="closeModal('viewFileModal')">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let appState = null;
+  let activeTableName = null;
+  let activeTableData = null;
+  let draftColumns = [];
+  let editingRowIndex = null;
+
+  async function api(url, options = {}) {
+    const res = await fetch(url, {
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || "Помилка сервера");
+    }
+    return data;
+  }
+
+  function showToast(msg, type = "success") {
+    const el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = `toast ${type}`;
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => { el.className = "toast"; }, 4500);
+  }
+
+  function showModalError(id, msg) {
+    const el = document.getElementById(id);
+    if (!msg) {
+      el.className = "modal-error";
+      el.textContent = "";
+    } else {
+      el.className = "modal-error show";
+      el.textContent = msg;
+    }
+  }
+
+  function openModal(id) { document.getElementById(id).classList.add("open"); }
+  function closeModal(id) { document.getElementById(id).classList.remove("open"); }
+
+  async function refreshState() {
+    appState = await api("/api/state");
+    document.getElementById("dbBadge").textContent = `БД: ${appState.db_name}`;
+    document.getElementById("fileBadge").textContent = appState.current_file
+      ? `Файл: ${appState.current_file}`
+      : "Не збережено";
+
+    const names = appState.tables.map((t) => t.name);
+    if (!names.includes(activeTableName)) {
+      activeTableName = names[0] || null;
+    }
+
+    renderSidebar();
+    await loadActiveTable();
+  }
+
+  function renderSidebar() {
+    const ul = document.getElementById("tableList");
+    ul.innerHTML = "";
+    if (!appState.tables.length) {
+      const li = document.createElement("li");
+      li.className = "hint";
+      li.textContent = "Таблиць ще немає.";
+      ul.appendChild(li);
+      return;
+    }
+
+    for (const t of appState.tables) {
+      const li = document.createElement("li");
+      li.className = "table-item" + (t.name === activeTableName ? " active" : "");
+      li.onclick = () => selectTable(t.name);
+
+      const left = document.createElement("div");
+      const title = document.createElement("div");
+      title.textContent = t.name;
+      const meta = document.createElement("div");
+      meta.className = "table-item-meta";
+      meta.textContent = `полів: ${t.columns.length} · рядків: ${t.row_count}`;
+      left.append(title, meta);
+
+      const delBtn = document.createElement("button");
+      delBtn.className = "danger sm";
+      delBtn.textContent = "✕";
+      delBtn.title = "Видалити таблицю";
+      delBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteTable(t.name);
+      };
+
+      li.append(left, delBtn);
+      ul.appendChild(li);
+    }
+  }
+
+  async function selectTable(name) {
+    activeTableName = name;
+    renderSidebar();
+    await loadActiveTable();
+  }
+
+  async function loadActiveTable() {
+    const ws = document.getElementById("workspace");
+    ws.innerHTML = "";
+
+    if (!activeTableName) {
+      const empty = document.createElement("div");
+      empty.className = "empty-state";
+      empty.textContent = "Створіть нову таблицю зліва або завантажте базу даних з диска.";
+      ws.appendChild(empty);
+      activeTableData = null;
+      return;
+    }
+
+    activeTableData = await api(`/api/tables/${encodeURIComponent(activeTableName)}`);
+
+    // Верхня панель таблиці
+    const bar = document.createElement("div");
+    bar.className = "workspace-bar";
+
+    const info = document.createElement("div");
+    const strong = document.createElement("strong");
+    strong.textContent = `Таблиця: ${activeTableData.name}`;
+    const meta = document.createElement("span");
+    meta.className = "hint";
+    meta.style.marginLeft = "10px";
+    meta.textContent = `Полів: ${activeTableData.columns.length} | Рядків: ${activeTableData.rows.length}`;
+    info.append(strong, meta);
+
+    const actions = document.createElement("div");
+    actions.className = "inline-row";
+
+    const addBtn = document.createElement("button");
+    addBtn.className = "primary";
+    addBtn.textContent = "+ Додати рядок";
+    addBtn.onclick = () => openRowModal(null);
+
+    const dedupBtn = document.createElement("button");
+    dedupBtn.className = "accent";
+    dedupBtn.textContent = "Вилучити повторювані рядки";
+    dedupBtn.onclick = deduplicateRows;
+
+    actions.append(addBtn, dedupBtn);
+    bar.append(info, actions);
+    ws.appendChild(bar);
+
+    // Таблиця даних
+    const wrap = document.createElement("div");
+    wrap.className = "table-wrap";
+    const tableEl = document.createElement("table");
+
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+
+    const numTh = document.createElement("th");
+    numTh.textContent = "#";
+    headRow.appendChild(numTh);
+
+    for (const col of activeTableData.columns) {
+      const th = document.createElement("th");
+      th.append(document.createTextNode(col.name));
+      const tag = document.createElement("span");
+      tag.className = "type-tag";
+      tag.textContent = col.field_type;
+      th.appendChild(tag);
+      headRow.appendChild(th);
+    }
+
+    const actTh = document.createElement("th");
+    actTh.textContent = "Дії";
+    headRow.appendChild(actTh);
+    thead.appendChild(headRow);
+    tableEl.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    if (!activeTableData.rows.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = activeTableData.columns.length + 2;
+      td.className = "hint";
+      td.style.textAlign = "center";
+      td.textContent = "У цій таблиці поки немає рядків.";
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    } else {
+      activeTableData.rows.forEach((row, idx) => {
+        const tr = document.createElement("tr");
+
+        const idxTd = document.createElement("td");
+        idxTd.textContent = String(idx + 1);
+        tr.appendChild(idxTd);
+
+        for (const col of activeTableData.columns) {
+          const td = document.createElement("td");
+          const val = row[col.name];
+
+          if (col.field_type === "integerInvl" && val && typeof val === "object") {
+            td.textContent = `[${val.min}, ${val.max}]`;
+          } else if (col.field_type === "text_file" && val && typeof val === "object") {
+            const span = document.createElement("span");
+            span.textContent = `${val.filename} (${val.content.length} симв.) `;
+            const viewBtn = document.createElement("button");
+            viewBtn.className = "sm";
+            viewBtn.textContent = "Відкрити";
+            viewBtn.onclick = () => openViewFileModal(val.filename, val.content);
+            td.append(span, viewBtn);
+          } else {
+            td.textContent = String(val);
+          }
+          tr.appendChild(td);
+        }
+
+        const actTd = document.createElement("td");
+        actTd.className = "inline-row";
+        const editBtn = document.createElement("button");
+        editBtn.className = "sm";
+        editBtn.textContent = "Редагувати";
+        editBtn.onclick = () => openRowModal(idx);
+
+        const delBtn = document.createElement("button");
+        delBtn.className = "danger sm";
+        delBtn.textContent = "Видалити";
+        delBtn.onclick = () => deleteRow(idx);
+
+        actTd.append(editBtn, delBtn);
+        tr.appendChild(actTd);
+        tbody.appendChild(tr);
+      });
+    }
+
+    tableEl.appendChild(tbody);
+    wrap.appendChild(tableEl);
+    ws.appendChild(wrap);
+  }
+
+  // ---- Операції з БД ----
+
+  function openNewDbModal() {
+    showModalError("newDbError", "");
+    openModal("newDbModal");
+  }
+
+  async function submitNewDb() {
+    const name = document.getElementById("newDbNameInput").value;
+    try {
+      const res = await api("/api/database/new", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      closeModal("newDbModal");
+      activeTableName = null;
+      await refreshState();
+      showToast(res.message);
+    } catch (err) {
+      showModalError("newDbError", err.message);
+    }
+  }
+
+  async function openDiskModal() {
+    showModalError("diskError", "");
+    await refreshState();
+    document.getElementById("saveFilenameInput").value =
+      appState.current_file || `${appState.db_name}.json`;
+
+    const list = document.getElementById("savedFilesList");
+    list.innerHTML = "";
+    if (!appState.saved_files.length) {
+      const p = document.createElement("div");
+      p.className = "hint";
+      p.textContent = "У папці saved_dbs/ ще немає збережених файлів.";
+      list.appendChild(p);
+    } else {
+      for (const fname of appState.saved_files) {
+        const item = document.createElement("div");
+        item.className = "col-chip";
+        const span = document.createElement("span");
+        span.textContent = fname;
+        const btn = document.createElement("button");
+        btn.className = "sm primary";
+        btn.textContent = "Відкрити";
+        btn.onclick = () => submitLoadDisk(fname);
+        item.append(span, btn);
+        list.appendChild(item);
+      }
+    }
+    openModal("diskModal");
+  }
+
+  async function submitSaveDisk() {
+    const filename = document.getElementById("saveFilenameInput").value;
+    try {
+      const res = await api("/api/database/save", {
+        method: "POST",
+        body: JSON.stringify({ filename }),
+      });
+      closeModal("diskModal");
+      await refreshState();
+      showToast(res.message);
+    } catch (err) {
+      showModalError("diskError", err.message);
+    }
+  }
+
+  async function submitLoadDisk(filename) {
+    try {
+      const res = await api("/api/database/load", {
+        method: "POST",
+        body: JSON.stringify({ filename }),
+      });
+      closeModal("diskModal");
+      activeTableName = null;
+      await refreshState();
+      showToast(res.message);
+    } catch (err) {
+      showModalError("diskError", err.message);
+    }
+  }
+
+  function triggerImportJson() {
+    document.getElementById("importJsonInput").click();
+  }
+
+  document.getElementById("importJsonInput").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      const res = await api("/api/database/import", {
+        method: "POST",
+        body: JSON.stringify({ data: parsed }),
+      });
+      activeTableName = null;
+      await refreshState();
+      showToast(res.message);
+    } catch (err) {
+      showToast(`Помилка імпорту: ${err.message}`, "error");
+    }
+  });
+
+  // ---- Створення та знищення таблиць ----
+
+  function openCreateTableModal() {
+    showModalError("createTableError", "");
+    document.getElementById("newTableNameInput").value = "";
+    document.getElementById("newColNameInput").value = "";
+    draftColumns = [];
+
+    const select = document.getElementById("newColTypeSelect");
+    select.innerHTML = "";
+    for (const [val, label] of Object.entries(appState.field_types)) {
+      const opt = document.createElement("option");
+      opt.value = val;
+      opt.textContent = label;
+      select.appendChild(opt);
+    }
+    renderDraftColumns();
+    openModal("createTableModal");
+  }
+
+  function addDraftColumn() {
+    showModalError("createTableError", "");
+    const name = document.getElementById("newColNameInput").value.trim();
+    const fieldType = document.getElementById("newColTypeSelect").value;
+    if (!name) {
+      showModalError("createTableError", "Введіть назву поля.");
+      return;
+    }
+    if (draftColumns.some((c) => c.name === name)) {
+      showModalError("createTableError", `Поле '${name}' вже додано.`);
+      return;
+    }
+    draftColumns.push({ name, field_type: fieldType });
+    document.getElementById("newColNameInput").value = "";
+    renderDraftColumns();
+  }
+
+  function renderDraftColumns() {
+    const box = document.getElementById("draftColsList");
+    box.innerHTML = "";
+    if (!draftColumns.length) {
+      const p = document.createElement("div");
+      p.className = "hint";
+      p.textContent = "Додайте хоча б одне поле.";
+      box.appendChild(p);
+      return;
+    }
+    draftColumns.forEach((col, i) => {
+      const div = document.createElement("div");
+      div.className = "col-chip";
+      const span = document.createElement("span");
+      span.textContent = `${col.name} (${col.field_type})`;
+      const btn = document.createElement("button");
+      btn.className = "danger sm";
+      btn.textContent = "Видалити";
+      btn.onclick = () => {
+        draftColumns.splice(i, 1);
+        renderDraftColumns();
+      };
+      div.append(span, btn);
+      box.appendChild(div);
+    });
+  }
+
+  async function submitCreateTable() {
+    const name = document.getElementById("newTableNameInput").value;
+    try {
+      const created = await api("/api/tables", {
+        method: "POST",
+        body: JSON.stringify({ name, columns: draftColumns }),
+      });
+      closeModal("createTableModal");
+      activeTableName = created.name;
+      await refreshState();
+      showToast(`Створено таблицю '${created.name}'.`);
+    } catch (err) {
+      showModalError("createTableError", err.message);
+    }
+  }
+
+  async function deleteTable(name) {
+    if (!confirm(`Знищити таблицю '${name}' разом з усіма рядками?`)) return;
+    try {
+      const res = await api(`/api/tables/${encodeURIComponent(name)}`, { method: "DELETE" });
+      await refreshState();
+      showToast(res.message);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
+  // ---- Робота з рядками та індивідуальна операція ----
+
+  function openRowModal(rowIndex) {
+    editingRowIndex = rowIndex;
+    showModalError("rowModalError", "");
+    document.getElementById("rowModalTitle").textContent =
+      rowIndex === null ? "Додавання нового рядка" : `Редагування рядка #${rowIndex + 1}`;
+
+    const container = document.getElementById("rowFormFields");
+    container.innerHTML = "";
+    const existing = rowIndex !== null ? activeTableData.rows[rowIndex] : {};
+
+    const hints = {
+      integer: "Ціле число (напр. 42 або -7)",
+      real: "Дійсне число (напр. 3.14)",
+      char: "Рівно 1 символ",
+      string: "Будь-який текстовий рядок",
+      integerInvl: "Інтервал цілих чисел: [min, max] або min..max",
+    };
+
+    for (const col of activeTableData.columns) {
+      const group = document.createElement("div");
+      group.className = "field-group";
+
+      const label = document.createElement("label");
+      label.textContent = `${col.name} (${col.field_type})`;
+      group.appendChild(label);
+
+      const initial = existing[col.name];
+
+      if (col.field_type === "text_file") {
+        const topRow = document.createElement("div");
+        topRow.className = "inline-row";
+
+        const fnameInput = document.createElement("input");
+        fnameInput.type = "text";
+        fnameInput.dataset.colName = col.name;
+        fnameInput.dataset.part = "filename";
+        fnameInput.value = initial ? initial.filename : "file.txt";
+
+        const filePicker = document.createElement("input");
+        filePicker.type = "file";
+        filePicker.accept = ".txt,.md,.csv,.log,text/plain";
+        filePicker.style.display = "none";
+
+        const pickBtn = document.createElement("button");
+        pickBtn.type = "button";
+        pickBtn.textContent = "Обрати з ПК...";
+        pickBtn.onclick = () => filePicker.click();
+
+        const textarea = document.createElement("textarea");
+        textarea.rows = 4;
+        textarea.dataset.colName = col.name;
+        textarea.dataset.part = "content";
+        textarea.value = initial ? initial.content : "";
+
+        filePicker.onchange = async (e) => {
+          const f = e.target.files[0];
+          e.target.value = "";
+          if (!f) return;
+          try {
+            const buf = await f.arrayBuffer();
+            const text = new TextDecoder("utf-8", { fatal: true }).decode(buf);
+            if (text.includes("\u0000")) {
+              throw new Error("Файл містить бінарні дані.");
+            }
+            fnameInput.value = f.name;
+            textarea.value = text;
+            showModalError("rowModalError", "");
+          } catch (err) {
+            showModalError("rowModalError", `Файл '${f.name}' не є валідним UTF-8 текстом.`);
+          }
+        };
+
+        topRow.append(fnameInput, pickBtn, filePicker);
+        group.append(topRow, textarea);
+      } else {
+        if (hints[col.field_type]) {
+          const hint = document.createElement("div");
+          hint.className = "hint";
+          hint.textContent = hints[col.field_type];
+          group.appendChild(hint);
+        }
+        const input = document.createElement("input");
+        input.type = "text";
+        input.dataset.colName = col.name;
+        if (initial !== undefined) {
+          input.value =
+            col.field_type === "integerInvl" && typeof initial === "object"
+              ? `[${initial.min}, ${initial.max}]`
+              : String(initial);
+        }
+        group.appendChild(input);
+      }
+
+      container.appendChild(group);
+    }
+
+    openModal("rowModal");
+  }
+
+  async function submitRow() {
+    const row = {};
+    for (const col of activeTableData.columns) {
+      if (col.field_type === "text_file") {
+        const fname = document.querySelector(
+          `[data-col-name="${CSS.escape(col.name)}"][data-part="filename"]`
+        ).value;
+        const content = document.querySelector(
+          `[data-col-name="${CSS.escape(col.name)}"][data-part="content"]`
+        ).value;
+        row[col.name] = { filename: fname, content };
+      } else {
+        row[col.name] = document.querySelector(
+          `[data-col-name="${CSS.escape(col.name)}"]`
+        ).value;
+      }
+    }
+
+    try {
+      const encoded = encodeURIComponent(activeTableName);
+      if (editingRowIndex === null) {
+        await api(`/api/tables/${encoded}/rows`, {
+          method: "POST",
+          body: JSON.stringify({ row }),
+        });
+        showToast("Рядок успішно додано.");
+      } else {
+        await api(`/api/tables/${encoded}/rows/${editingRowIndex}`, {
+          method: "PUT",
+          body: JSON.stringify({ row }),
+        });
+        showToast(`Рядок #${editingRowIndex + 1} оновлено.`);
+      }
+      closeModal("rowModal");
+      await refreshState();
+    } catch (err) {
+      showModalError("rowModalError", err.message);
+    }
+  }
+
+  async function deleteRow(idx) {
+    try {
+      const res = await api(
+        `/api/tables/${encodeURIComponent(activeTableName)}/rows/${idx}`,
+        { method: "DELETE" }
+      );
+      await refreshState();
+      showToast(res.message);
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
+  async function deduplicateRows() {
+    try {
+      const res = await api(
+        `/api/tables/${encodeURIComponent(activeTableName)}/deduplicate`,
+        { method: "POST" }
+      );
+      await refreshState();
+      if (res.removed > 0) {
+        showToast(`Вилучено повторюваних рядків: ${res.removed}.`);
+      } else {
+        showToast("Повторюваних рядків не знайдено.");
+      }
+    } catch (err) {
+      showToast(err.message, "error");
+    }
+  }
+
+  function openViewFileModal(filename, content) {
+    document.getElementById("viewFileTitle").textContent = `Файл: ${filename}`;
+    document.getElementById("viewFileContent").value = content;
+    openModal("viewFileModal");
+  }
+
+  refreshState().catch((err) => showToast(err.message, "error"));
+</script>
+</body>
+</html>
